@@ -94,7 +94,10 @@ export function PreviewTab({ apiBase, adminKey = "" }: PreviewTabProps2) {
   const clearCache = async () => {
     setClearingCache(true);
     try {
-      await fetch(`${apiBase}/api/cache?key=${encodeURIComponent(adminKey)}`, { method: "DELETE" });
+      await fetch(`${apiBase}/api/cache`, {
+        method: "DELETE",
+        headers: { "X-Admin-Key": adminKey },
+      });
       // Force a fresh fetch bypassing any remaining cache
       await fetchPrices(true);
     } catch { /* ignore */ } finally {

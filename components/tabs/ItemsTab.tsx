@@ -66,7 +66,9 @@ export function ItemsTab({ adminKey, apiBase }: ItemsTabProps) {
   const handleRefreshCatalog = async () => {
     setRefreshing(true);
     try {
-      const res = await fetch(`${apiBase}/api/items/refresh?key=${encodeURIComponent(adminKey)}`);
+      const res = await fetch(`${apiBase}/api/items/refresh`, {
+        headers: { "X-Admin-Key": adminKey },
+      });
       const json = await res.json();
       if (json.success) {
         setMessage({ type: "success", text: `Catalog رفرش شد: ${json.catalogSize} نماد` });

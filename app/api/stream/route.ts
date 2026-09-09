@@ -2,11 +2,16 @@ import { NextRequest } from "next/server";
 import { getConfig } from "@/lib/config";
 import { loadCatalog } from "@/lib/catalog";
 import { fetchMultiplePrices } from "@/lib/tgju";
+import { applyRateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 export async function GET(req: NextRequest) {
+  const config = await getConfig();
+  const rl = applyRateLimit(req, config.rateLimitPerMinute);
+  if (!rl.ok) return rl.response;
+
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream({
@@ -81,6 +86,7 @@ export async function GET(req: NextRequest) {
       "Cache-Control": "no-cache",
       Connection: "keep-alive",
       "X-Accel-Buffering": "no",
+      ...rl.headers,
     },
   });
 }

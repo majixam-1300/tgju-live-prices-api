@@ -5,8 +5,7 @@ import { getConfig, verifyAdminKey } from "@/lib/config";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
-  const url = new URL(req.url);
-  const key = url.searchParams.get("key") ?? req.headers.get("x-admin-key") ?? "";
+  const key = req.headers.get("x-admin-key") ?? "";
   const config = await getConfig();
 
   if (!verifyAdminKey(key, config)) {

@@ -5,13 +5,10 @@ import { getConfig, verifyAdminKey } from "@/lib/config";
 export const dynamic = "force-dynamic";
 
 export async function DELETE(req: NextRequest) {
-  const url = new URL(req.url);
-  const key = url.searchParams.get("key") ?? req.headers.get("x-admin-key") ?? "";
+  const key = req.headers.get("x-admin-key") ?? "";
   const config = await getConfig();
 
-  // In development, allow clearing without admin key
-  const isDev = process.env.NODE_ENV === "development";
-  if (!isDev && !verifyAdminKey(key, config)) {
+  if (!verifyAdminKey(key, config)) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 

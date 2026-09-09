@@ -16,11 +16,12 @@ interface HealthData {
   selectedCount: number;
   uptime: number;
   memoryStoreSize: number;
-  recentLogs: LogEntry[];
+  recentLogs?: LogEntry[];
 }
 
 interface StatusTabProps {
   apiBase: string;
+  adminKey: string;
 }
 
 function formatUptime(s: number): string {
@@ -31,14 +32,16 @@ function formatUptime(s: number): string {
   return `${h} ساعت ${m} دقیقه`;
 }
 
-export function StatusTab({ apiBase }: StatusTabProps) {
+export function StatusTab({ apiBase, adminKey }: StatusTabProps) {
   const [health, setHealth] = useState<HealthData | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
   const fetchHealth = async () => {
     try {
-      const res = await fetch(`${apiBase}/api/health`);
+      const res = await fetch(`${apiBase}/api/health`, {
+        headers: { "X-Admin-Key": adminKey },
+      });
       const json = await res.json();
       setHealth(json);
     } catch {/* ignore */}
@@ -49,7 +52,7 @@ export function StatusTab({ apiBase }: StatusTabProps) {
     fetchHealth();
     const interval = setInterval(fetchHealth, 15000);
     return () => clearInterval(interval);
-  }, []);
+  }, [adminKey]);
 
   const pricesEndpoint = `${apiBase}/api/prices`;
 

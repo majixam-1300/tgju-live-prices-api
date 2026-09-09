@@ -4,6 +4,7 @@
  * Only active in development or when ADMIN_KEY is provided.
  */
 import { NextRequest, NextResponse } from "next/server";
+import { getConfig, verifyAdminKey } from "@/lib/config";
 
 export const dynamic = "force-dynamic";
 
@@ -16,11 +17,10 @@ export async function GET(
 ) {
   const { symbol } = await params;
 
-  // Only allow in dev or with admin key
-  const url = new URL(req.url);
-  const key = url.searchParams.get("key") ?? "";
   const isDev = process.env.NODE_ENV === "development";
-  if (!isDev && key !== process.env.ADMIN_KEY) {
+  const config = await getConfig();
+  const key = req.headers.get("x-admin-key") ?? "";
+  if (!isDev && !verifyAdminKey(key, config)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

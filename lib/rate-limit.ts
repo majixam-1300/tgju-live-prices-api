@@ -1,7 +1,7 @@
 /**
  * Sliding-window rate limiter (in-memory, per IP).
  */
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 const windowMs = 60_000; // 1 minute
 const ipMap = new Map<string, number[]>();
@@ -58,16 +58,55 @@ export function checkRateLimit(ip: string, limitPerMinute: number): RateLimitRes
 }
 
 export function getClientIp(req: NextRequest): string {
+  // Prefer the platform-controlled header on Vercel.
+  const vercelFwd = req.headers.get("x-vercel-forwarded-for");
+  if (vercelFwd) {
+    const ip = vercelFwd.split(",")[0].trim();
+    if (ip) return ip;
+  }
+  const realIp = req.headers.get("x-real-ip");
+  if (realIp) return realIp;
   const forwarded = req.headers.get("x-forwarded-for");
   if (forwarded) {
     const ip = forwarded.split(",")[0].trim();
     if (ip) return ip;
   }
-  // Try other common proxy headers
-  const realIp = req.headers.get("x-real-ip");
-  if (realIp) return realIp;
+  return "unknown";
+}
 
-  return "localhost";
+export function applyRateLimit(
+  req: NextRequest,
+  limitPerMinute: number
+):
+  | { ok: true; headers: Record<string, string> }
+  | { ok: false; headers: Record<string, string>; response: NextResponse } {
+  const ip = getClientIp(req);
+  const skipRateLimit = isLocalhost(ip) && process.env.NODE_ENV === "development";
+  const rl = skipRateLimit
+    ? { ok: true, limit: 999, remaining: 999, reset: 0 }
+    : checkRateLimit(ip, limitPerMinute);
+
+  const headers: Record<string, string> = {
+    "X-RateLimit-Limit": String(rl.limit),
+    "X-RateLimit-Remaining": String(rl.remaining),
+    "X-RateLimit-Reset": String(rl.reset),
+  };
+
+  if (!rl.ok) {
+    return {
+      ok: false,
+      headers,
+      response: NextResponse.json(
+        { success: false, error: "Too Many Requests" },
+        {
+          status: 429,
+          headers: { ...headers, "Retry-After": String(rl.retryAfter ?? 60) },
+        }
+      ),
+    };
+  }
+
+  return { ok: true, headers };
 }
 
 const LOCALHOST_IPS = new Set(["localhost", "127.0.0.1", "::1", "::ffff:127.0.0.1"]);

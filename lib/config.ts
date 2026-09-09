@@ -1,6 +1,7 @@
 /**
  * App configuration: persisted in Redis/memory.
  */
+import { timingSafeEqual } from "crypto";
 import { getConfigCache, setConfigCache } from "./cache";
 import { defaultSelectedSymbols } from "@/data/seed-symbols";
 
@@ -13,13 +14,25 @@ export interface AppConfig {
   adminKey: string;
 }
 
+const WEAK_ADMIN_KEYS = new Set(["", "change-me-please", "admin", "password"]);
+
+function resolveAdminKey(): string {
+  const fromEnv = process.env.ADMIN_KEY?.trim() ?? "";
+  if (WEAK_ADMIN_KEYS.has(fromEnv)) {
+    // Fail closed in production: unset/weak keys never authenticate.
+    if (process.env.NODE_ENV === "production") return "";
+    return fromEnv || "change-me-please";
+  }
+  return fromEnv;
+}
+
 const defaultConfig: AppConfig = {
   selectedItems: defaultSelectedSymbols,
   ttlSeconds: Number(process.env.CACHE_TTL_SECONDS ?? 30),
   rateLimitPerMinute: Number(process.env.RATE_LIMIT_PER_MINUTE ?? 60),
   sanityCheckEnabled: true,
   sanityCheckThreshold: Number(process.env.SANITY_CHECK_THRESHOLD ?? 25),
-  adminKey: process.env.ADMIN_KEY ?? "change-me-please",
+  adminKey: resolveAdminKey(),
 };
 
 let _cachedConfig: AppConfig | null = null;
@@ -47,6 +60,10 @@ export function invalidateConfigCache(): void {
 }
 
 export function verifyAdminKey(key: string, config: AppConfig): boolean {
-  const expected = process.env.ADMIN_KEY ?? config.adminKey;
-  return key === expected && key.length > 0;
+  const expected = resolveAdminKey() || config.adminKey;
+  if (!key || !expected || WEAK_ADMIN_KEYS.has(expected)) return false;
+  const a = Buffer.from(key);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
 }

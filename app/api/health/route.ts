@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getCacheStatus, getMemoryStoreSize } from "@/lib/cache";
 import { loadCatalog } from "@/lib/catalog";
-import { getConfig } from "@/lib/config";
+import { getConfig, verifyAdminKey } from "@/lib/config";
 import { getRecentLogs } from "@/lib/tgju";
 
 export const dynamic = "force-dynamic";
@@ -13,9 +13,10 @@ export function setLastFetch(ts: string) {
   lastFetch = ts;
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const [catalog, config] = await Promise.all([loadCatalog(), getConfig()]);
   const cacheStatus = getCacheStatus();
+  const isAdmin = verifyAdminKey(req.headers.get("x-admin-key") ?? "", config);
 
   return NextResponse.json({
     status: "ok",
@@ -25,6 +26,6 @@ export async function GET() {
     selectedCount: config.selectedItems.length,
     uptime: Math.floor((Date.now() - startTime) / 1000),
     memoryStoreSize: getMemoryStoreSize(),
-    recentLogs: getRecentLogs(20),
+    ...(isAdmin ? { recentLogs: getRecentLogs(20) } : {}),
   });
 }

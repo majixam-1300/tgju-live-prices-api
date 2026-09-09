@@ -172,7 +172,10 @@ export function SettingsTab({ adminKey, apiBase }: SettingsTabProps) {
     if (!window.confirm("آیا مطمئن هستید؟\nتمام داده‌های کَش‌شده پاک می‌شوند و fetch بعدی مستقیم از tgju.org انجام می‌شود.")) return;
     setClearing(true);
     try {
-      const res = await fetch(`${apiBase}/api/cache?key=${encodeURIComponent(adminKey)}`, { method: "DELETE" });
+      const res = await fetch(`${apiBase}/api/cache`, {
+        method: "DELETE",
+        headers: { "X-Admin-Key": adminKey },
+      });
       const json = await res.json();
       setMessage(json.success ? { type: "success", text: `🗑️ ${json.clearedCount} آیتم از کَش پاک شد` } : { type: "error", text: json.error ?? "خطا" });
     } catch {

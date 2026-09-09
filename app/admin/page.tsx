@@ -136,7 +136,7 @@ export default function AdminPage() {
           {activeTab === "items" && <ItemsTab adminKey={adminKey} apiBase={apiBase} />}
           {activeTab === "settings" && <SettingsTab adminKey={adminKey} apiBase={apiBase} />}
           {activeTab === "preview" && <PreviewTab apiBase={apiBase} adminKey={adminKey} />}
-          {activeTab === "status" && <StatusTab apiBase={apiBase} />}
+          {activeTab === "status" && <StatusTab apiBase={apiBase} adminKey={adminKey} />}
         </div>
       </main>
     </div>
